@@ -25,4 +25,6 @@
     <context:annotation-config/>
 
     <context:component-scan base-package="org.axonframework.examples.addressbook.vaadin"/>
+
+    <bean class="org.axonframework.sample.app.config.AxonConfig"/>
 </beans>

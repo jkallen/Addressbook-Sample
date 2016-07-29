@@ -19,6 +19,7 @@ package org.axonframework.sample.app;
 import org.axonframework.eventstore.EventStore;
 import org.axonframework.repository.Repository;
 import org.axonframework.sample.app.command.ContactCommandHandler;
+import org.axonframework.sample.app.config.AxonConfig;
 import org.axonframework.sample.app.query.ContactRepository;
 import org.junit.*;
 import org.junit.runner.*;
@@ -33,8 +34,7 @@ import static org.junit.Assert.*;
  * @author Allard Buijze
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"classpath:/META-INF/spring/application-context.xml",
-        "classpath:/META-INF/spring/database-context.xml"})
+@ContextConfiguration(classes = AxonConfig.class)
 public class ContactIntegrationTest {
 
     @Autowired

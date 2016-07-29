@@ -37,7 +37,7 @@ import java.util.Map;
  *
  * @author Allard Buijze
  */
-class Contact extends AbstractAnnotatedAggregateRoot {
+public class Contact extends AbstractAnnotatedAggregateRoot {
 
     private Map<AddressType, Address> addresses = new HashMap<AddressType, Address>();
     private String id;
@@ -46,8 +46,7 @@ class Contact extends AbstractAnnotatedAggregateRoot {
         apply(new ContactCreatedEvent(identifier, name));
     }
 
-    @SuppressWarnings("UnusedDeclaration")
-    Contact() {
+    public Contact() {
     }
 
     /**

@@ -12,6 +12,8 @@
     -->
     <context:component-scan base-package="org.axonframework.examples.addressbook.rest.listener"/>
 
+    <bean class="org.axonframework.sample.app.config.AxonConfig"/>
+
     <bean id="jedisPool" class="redis.clients.jedis.JedisPool" destroy-method="destroy">
         <constructor-arg index="0">
             <bean class="redis.clients.jedis.JedisPoolConfig"/>
