@@ -20,6 +20,7 @@ import com.mchange.v2.c3p0.ComboPooledDataSource;
 import org.axonframework.sample.app.query.AddressTableUpdater;
 import org.axonframework.sample.app.query.ContactRepository;
 import org.axonframework.sample.app.query.ContactRepositoryImpl;
+import org.axonframework.spring.config.TransactionManagerFactoryBean;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +42,7 @@ public class DatabaseConfig implements EnvironmentAware {
     private Environment environment;
 
     @Override
-    public void setEnvironment(final Environment environment) {
+    public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
@@ -58,26 +59,32 @@ public class DatabaseConfig implements EnvironmentAware {
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() throws PropertyVetoException {
         LocalContainerEntityManagerFactoryBean entityManagerFactoryBean = new LocalContainerEntityManagerFactoryBean();
-        entityManagerFactoryBean.setPersistenceUnitName("addresses");
 
         HibernateJpaVendorAdapter jpaVendorAdapter = new HibernateJpaVendorAdapter();
         jpaVendorAdapter.setDatabasePlatform(environment.getProperty("hibernate.sql.dialect"));
         jpaVendorAdapter.setGenerateDdl(environment.getProperty("hibernate.sql.generateddl", Boolean.class));
         jpaVendorAdapter.setShowSql(environment.getProperty("hibernate.sql.show", Boolean.class));
 
+        entityManagerFactoryBean.setPersistenceUnitName("addresses");
         entityManagerFactoryBean.setJpaVendorAdapter(jpaVendorAdapter);
-
         entityManagerFactoryBean.setDataSource(dataSource());
+        entityManagerFactoryBean.setJpaDialect(new CustomIsolationLevelSupportHibernateJpaDialect());
 
         return entityManagerFactoryBean;
     }
 
     @Bean
-    public JpaTransactionManager transactionManager() throws PropertyVetoException {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(entityManagerFactory().getObject());
+    public JpaTransactionManager jpaTransactionManager() throws PropertyVetoException {
+        return new JpaTransactionManager(entityManagerFactory().getObject());
+    }
 
-        return transactionManager;
+    @Bean
+    public TransactionManagerFactoryBean transactionManagerFactoryBean()
+            throws PropertyVetoException {
+        TransactionManagerFactoryBean factoryBean = new TransactionManagerFactoryBean();
+        factoryBean.setTransactionManager(jpaTransactionManager());
+
+        return factoryBean;
     }
 
     @Bean
@@ -89,6 +96,7 @@ public class DatabaseConfig implements EnvironmentAware {
         comboPooledDataSource.setPassword(environment.getProperty("jdbc.password"));
         comboPooledDataSource.setMaxPoolSize(15);
         comboPooledDataSource.setMinPoolSize(5);
+
         return comboPooledDataSource;
     }
 

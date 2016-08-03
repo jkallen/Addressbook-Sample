@@ -16,7 +16,7 @@
 
 package org.axonframework.examples.addressbook.rest.listener;
 
-import org.axonframework.eventhandling.annotation.EventHandler;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.sample.app.api.ContactCreatedEvent;
 import org.axonframework.sample.app.api.ContactDeletedEvent;
 import org.axonframework.sample.app.api.ContactNameChangedEvent;

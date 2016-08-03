@@ -16,7 +16,7 @@
 
 package org.axonframework.examples.addressbook.web.listener;
 
-import org.axonframework.eventhandling.annotation.EventHandler;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.examples.addressbook.web.dto.AddressDTO;
 import org.axonframework.examples.addressbook.web.dto.RemovedDTO;
 import org.axonframework.sample.app.api.AddressRegisteredEvent;

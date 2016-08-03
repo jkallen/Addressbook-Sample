@@ -16,7 +16,7 @@
 
 package org.axonframework.examples.addressbook.rest.listener;
 
-import org.axonframework.eventhandling.annotation.EventHandler;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.sample.app.api.AddressRegisteredEvent;
 import org.axonframework.sample.app.api.AddressRemovedEvent;
 import org.axonframework.sample.app.query.AddressEntry;

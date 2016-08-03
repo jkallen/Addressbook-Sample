@@ -16,15 +16,14 @@
 
 package org.axonframework.sample.app;
 
-import org.axonframework.eventstore.EventStore;
-import org.axonframework.repository.Repository;
+import org.axonframework.commandhandling.model.Repository;
+import org.axonframework.eventsourcing.eventstore.EventStore;
 import org.axonframework.sample.app.command.ContactCommandHandler;
 import org.axonframework.sample.app.config.AxonConfig;
 import org.axonframework.sample.app.query.ContactRepository;
 import org.junit.*;
 import org.junit.runner.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -44,9 +43,6 @@ public class ContactIntegrationTest {
     private EventStore eventStore;
 
     @Autowired
-    private ThreadPoolTaskExecutor taskExecutor;
-
-    @Autowired
     private ContactRepository contactRepository;
 
     @Autowired
@@ -56,9 +52,7 @@ public class ContactIntegrationTest {
     public void testApplicationContext() throws InterruptedException {
         assertNotNull(commandHandler);
         assertNotNull(eventStore);
-        assertNotNull(taskExecutor);
         assertNotNull(contactRepository);
         assertNotNull(commandRepository);
     }
-
 }

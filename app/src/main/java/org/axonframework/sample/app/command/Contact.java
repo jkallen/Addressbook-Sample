@@ -16,8 +16,9 @@
 
 package org.axonframework.sample.app.command;
 
-import org.axonframework.eventhandling.annotation.EventHandler;
-import org.axonframework.eventsourcing.annotation.AbstractAnnotatedAggregateRoot;
+import org.axonframework.commandhandling.model.AggregateIdentifier;
+import org.axonframework.commandhandling.model.AggregateRoot;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.sample.app.api.Address;
 import org.axonframework.sample.app.api.AddressAddedEvent;
 import org.axonframework.sample.app.api.AddressChangedEvent;
@@ -31,15 +32,20 @@ import org.axonframework.sample.app.api.ContactNameChangedEvent;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.axonframework.commandhandling.model.AggregateLifecycle.apply;
+import static org.axonframework.commandhandling.model.AggregateLifecycle.markDeleted;
+
 /**
  * <p>The Aggregate root component of the sample application. This component handles all contact as well as address
  * domain events.</p>
  *
  * @author Allard Buijze
  */
-public class Contact extends AbstractAnnotatedAggregateRoot {
+@AggregateRoot
+public class Contact {
 
     private Map<AddressType, Address> addresses = new HashMap<AddressType, Address>();
+    @AggregateIdentifier
     private String id;
 
     public Contact(String identifier, String name) {

@@ -16,7 +16,7 @@
 
 package org.axonframework.sample.app.query;
 
-import org.axonframework.eventhandling.annotation.EventHandler;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.sample.app.api.AddressAddedEvent;
 import org.axonframework.sample.app.api.AddressChangedEvent;
 import org.axonframework.sample.app.api.AddressRemovedEvent;

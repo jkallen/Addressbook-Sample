@@ -16,82 +16,77 @@
 
 package org.axonframework.sample.app.config;
 
+import org.axonframework.commandhandling.AnnotationCommandHandlerAdapter;
 import org.axonframework.commandhandling.CommandBus;
 import org.axonframework.commandhandling.SimpleCommandBus;
-import org.axonframework.commandhandling.annotation.AnnotationCommandHandlerBeanPostProcessor;
-import org.axonframework.contextsupport.spring.TransactionManagerFactoryBean;
-import org.axonframework.eventhandling.EventBus;
-import org.axonframework.eventhandling.SimpleEventBus;
-import org.axonframework.eventhandling.annotation.AnnotationEventListenerBeanPostProcessor;
-import org.axonframework.eventsourcing.AggregateFactory;
+import org.axonframework.common.jpa.ContainerManagedEntityManagerProvider;
+import org.axonframework.common.jpa.EntityManagerProvider;
+import org.axonframework.common.transaction.TransactionManager;
+import org.axonframework.eventhandling.SimpleEventHandlerInvoker;
+import org.axonframework.eventhandling.SubscribingEventProcessor;
+import org.axonframework.eventsourcing.AggregateSnapshotter;
 import org.axonframework.eventsourcing.EventCountSnapshotterTrigger;
 import org.axonframework.eventsourcing.EventSourcingRepository;
-import org.axonframework.eventsourcing.Snapshotter;
-import org.axonframework.eventsourcing.SpringAggregateSnapshotter;
-import org.axonframework.eventsourcing.SpringPrototypeAggregateFactory;
-import org.axonframework.eventstore.fs.FileSystemEventStore;
-import org.axonframework.eventstore.fs.SimpleEventFileResolver;
+import org.axonframework.eventsourcing.eventstore.EmbeddedEventStore;
+import org.axonframework.eventsourcing.eventstore.EventStorageEngine;
+import org.axonframework.eventsourcing.eventstore.jpa.JpaEventStorageEngine;
 import org.axonframework.sample.app.command.Contact;
 import org.axonframework.sample.app.command.ContactCommandHandler;
 import org.axonframework.sample.app.command.ContactNameRepository;
 import org.axonframework.sample.app.command.JpaContactNameRepository;
+import org.axonframework.sample.app.query.AddressTableUpdater;
 import org.axonframework.sample.app.query.ContactRepository;
+import org.axonframework.spring.eventsourcing.SpringAggregateSnapshotterFactoryBean;
+import org.axonframework.spring.eventsourcing.SpringPrototypeAggregateFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 @Configuration
 @Import({DatabaseConfig.class, DataInitConfig.class})
 public class AxonConfig {
 
-    @Bean
-    public TaskExecutor taskExecutor() {
-        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-        threadPoolTaskExecutor.setCorePoolSize(2);
-        threadPoolTaskExecutor.setMaxPoolSize(5);
-        threadPoolTaskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+    @Autowired
+    private ContactRepository queryContactRepository;
 
-        return threadPoolTaskExecutor;
+    @Autowired
+    private TransactionManager transactionManager;
+
+    @Autowired
+    private AddressTableUpdater addressTableUpdater;
+
+    @Autowired
+    private AggregateSnapshotter aggregateSnapshotter;
+
+    @Bean
+    public CommandBus commandBus() throws Exception {
+        SimpleCommandBus commandBus = new SimpleCommandBus();
+        commandBus.setTransactionManager(transactionManager);
+
+        return commandBus;
     }
 
     @Bean
-    public EventBus eventBus() {
-        return new SimpleEventBus();
+    public EntityManagerProvider entityManagerProvider() {
+        return new ContainerManagedEntityManagerProvider();
     }
 
     @Bean
-    public Snapshotter snapshotter() {
-        SpringAggregateSnapshotter snapshotter = new SpringAggregateSnapshotter();
-        snapshotter.setEventStore(eventStore());
-        snapshotter.setExecutor(taskExecutor());
-
-        AggregateFactory<Contact> contactAggregateFactory = springPrototypeAggregateFactory();
-        List<AggregateFactory<?>> aggregateFactories = new ArrayList<AggregateFactory<?>>();
-        aggregateFactories.add(contactAggregateFactory);
-        snapshotter.setAggregateFactories(aggregateFactories);
-
-        return snapshotter;
+    public EventStorageEngine eventStorageEngine() {
+        return new JpaEventStorageEngine(entityManagerProvider(), transactionManager);
     }
 
     @Bean
-    public FileSystemEventStore eventStore() {
-        String property = System.getProperty("java.io.tmpdir");
-        return new FileSystemEventStore(new SimpleEventFileResolver(new File(property)));
+    public EmbeddedEventStore eventStore() {
+        return new EmbeddedEventStore(eventStorageEngine());
     }
 
     @Bean
-    public ContactCommandHandler contactCommandHandler(EventSourcingRepository<Contact> repository,
-                                                       ContactRepository queryContactRepository) {
+    public ContactCommandHandler contactCommandHandler() {
         ContactCommandHandler commandHandler = new ContactCommandHandler();
-        commandHandler.setRepository(repository);
+        commandHandler.setRepository(contactRepository());
         commandHandler.setContactRepository(queryContactRepository);
         commandHandler.setContactNameRepository(contactNameRepository());
 
@@ -104,51 +99,53 @@ public class AxonConfig {
     }
 
     @Bean
+    public AnnotationCommandHandlerAdapter annotationCommandHandlerAdapter() throws Exception {
+        AnnotationCommandHandlerAdapter annotationCommandHandlerAdapter =
+                new AnnotationCommandHandlerAdapter(contactCommandHandler());
+
+        annotationCommandHandlerAdapter.subscribe(commandBus());
+
+        return annotationCommandHandlerAdapter;
+    }
+
+    @Bean
     @Scope("prototype")
     public Contact contact() {
         return new Contact();
     }
 
     @Bean
-    public AggregateFactory<Contact> springPrototypeAggregateFactory() {
-        SpringPrototypeAggregateFactory<Contact> aggregateFactory = new SpringPrototypeAggregateFactory<Contact>();
+    public SpringAggregateSnapshotterFactoryBean springAggregateSnapshotterFactoryBean() {
+        return new SpringAggregateSnapshotterFactoryBean();
+    }
+
+    @Bean
+    public SpringPrototypeAggregateFactory<Contact> springPrototypeAggregateFactory() {
+        SpringPrototypeAggregateFactory<Contact> aggregateFactory = new SpringPrototypeAggregateFactory<>();
         aggregateFactory.setPrototypeBeanName("contact");
-        aggregateFactory.setTypeIdentifier("Contact");
 
         return aggregateFactory;
     }
 
     @Bean
     public EventSourcingRepository<Contact> contactRepository() {
-        EventSourcingRepository<Contact> repository = new EventSourcingRepository<Contact>(Contact.class, eventStore());
-        repository.setEventBus(eventBus());
+        EventSourcingRepository<Contact> repository = new EventSourcingRepository<>(Contact.class, eventStore());
 
         EventCountSnapshotterTrigger snapshotterTrigger = new EventCountSnapshotterTrigger();
         snapshotterTrigger.setTrigger(5);
-        snapshotterTrigger.setSnapshotter(snapshotter());
+        snapshotterTrigger.setSnapshotter(aggregateSnapshotter);
         repository.setSnapshotterTrigger(snapshotterTrigger);
 
         return repository;
     }
 
     @Bean
-    public CommandBus commandBus(JpaTransactionManager transactionManager) throws Exception {
-        SimpleCommandBus simpleCommandBus = new SimpleCommandBus();
-
-        TransactionManagerFactoryBean factoryBean = new TransactionManagerFactoryBean();
-        factoryBean.setTransactionManager(transactionManager);
-        simpleCommandBus.setTransactionManager(factoryBean.getObject());
-
-        return simpleCommandBus;
-    }
-
-    @Bean
-    public AnnotationCommandHandlerBeanPostProcessor annotationCommandHandlerBeanPostProcessor() {
-        return new AnnotationCommandHandlerBeanPostProcessor();
-    }
-
-    @Bean
-    public AnnotationEventListenerBeanPostProcessor annotationEventListenerBeanPostProcessor() {
-        return new AnnotationEventListenerBeanPostProcessor();
+    public SubscribingEventProcessor eventProcessor() {
+        SubscribingEventProcessor eventProcessor = new SubscribingEventProcessor("eventProcessor",
+                                                                                 new SimpleEventHandlerInvoker(
+                                                                                         addressTableUpdater),
+                                                                                 eventStore());
+        eventProcessor.start();
+        return eventProcessor;
     }
 }
